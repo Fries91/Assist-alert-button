@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Fight Assist Bar Under News Ticker
 // @namespace    Fries91.Torn.AssistButton
-// @version      3.0.0
+// @version      3.1.0
 // @description  Slim Assist bar under Torn's news ticker. Opens faction chat, fills the fight link, and tries to send. Auto-updates from GitHub.
 // @author       Fries91
 // @match        https://www.torn.com/*
@@ -15,10 +15,12 @@
 (function () {
   'use strict';
 
-  const VERSION = '3.0.0';
+  const VERSION = '3.1.0';
   const BAR_ID = 'fries91-assist-news-bar';
   const TOAST_ID = 'fries91-assist-toast';
   const ASSIST_COMMAND = '/assist';
+  let assistSendLocked = false;
+  let lastAssistTapAt = 0;
 
   function css(el, prop, value) {
     if (el) el.style.setProperty(prop, value, 'important');
@@ -584,9 +586,26 @@
   }
 
   async function sendAssist() {
-    const msg = buildAssistMessage();
-    const ok = await sendMessageThroughChat(msg);
-    console.log('[Fries91 Assist]', ok ? 'Sent assist:' : 'Assist fallback/manual send:', msg);
+    const now = Date.now();
+
+    // Prevent double-posting on mobile where touchend and click both fire.
+    if (assistSendLocked || now - lastAssistTapAt < 1800) {
+      console.log('[Fries91 Assist] Ignored duplicate tap/send.');
+      return;
+    }
+
+    assistSendLocked = true;
+    lastAssistTapAt = now;
+
+    try {
+      const msg = buildAssistMessage();
+      const ok = await sendMessageThroughChat(msg);
+      console.log('[Fries91 Assist]', ok ? 'Sent assist:' : 'Assist fallback/manual send:', msg);
+    } finally {
+      setTimeout(() => {
+        assistSendLocked = false;
+      }, 2200);
+    }
   }
 
   function makeBar() {
@@ -609,6 +628,11 @@
       const handler = (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
+
+        // touchend and click can both fire from one tap on mobile.
+        const now = Date.now();
+        if (now - lastAssistTapAt < 350) return;
+
         sendAssist();
       };
 
@@ -731,6 +755,7 @@
 
     if (getEditableText(el).trim().toLowerCase() !== ASSIST_COMMAND) return;
     if (e.key !== 'Enter') return;
+    if (e.repeat) return;
 
     e.preventDefault();
     e.stopPropagation();
