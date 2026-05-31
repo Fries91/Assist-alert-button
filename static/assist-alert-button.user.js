@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Fight Assist Bar Under News Ticker
 // @namespace    Fries91.Torn.AssistButton
-// @version      3.1.0
+// @version      3.2.0
 // @description  Slim Assist bar under Torn's news ticker. Opens faction chat, fills the fight link, and tries to send. Auto-updates from GitHub.
 // @author       Fries91
 // @match        https://www.torn.com/*
@@ -15,7 +15,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '3.1.0';
+  const VERSION = '3.2.0';
   const BAR_ID = 'fries91-assist-news-bar';
   const TOAST_ID = 'fries91-assist-toast';
   const ASSIST_COMMAND = '/assist';
@@ -557,39 +557,26 @@
     const sendBtn = findSendButton();
 
     if (sendBtn) {
+      // Use ONE send action only.
+      // Do not press Enter afterward. TornPDA may still show the text briefly,
+      // and that was causing duplicate faction chat posts.
       trustedClickish(sendBtn);
-      await sleep(550);
-    } else {
-      // Coordinate fallback: right side of the chat input where the paper-plane button is.
-      const r = input.getBoundingClientRect();
-      const x = Math.min(window.innerWidth - 28, r.right + 28);
-      const y = r.top + r.height / 2;
-      clickAt(x, y);
-      await sleep(550);
+      await sleep(700);
+      toast('Assist link sent to faction chat.');
+      return true;
     }
 
-    // If text is still there, try Enter once.
-    if (getEditableText(input).trim()) {
-      pressEnter(input);
-      await sleep(350);
-    }
-
-    // If text is still there, do NOT clear it.
-    if (getEditableText(input).trim()) {
-      navigator.clipboard?.writeText(message).catch(() => {});
-      toast('Chat opened and link is ready. Tap send.', false);
-      return false;
-    }
-
-    toast('Assist link sent to faction chat.');
-    return true;
+    // If no send button is found, leave the text ready for manual send.
+    navigator.clipboard?.writeText(message).catch(() => {});
+    toast('Chat opened and link is ready. Tap send.', false);
+    return false;
   }
 
   async function sendAssist() {
     const now = Date.now();
 
     // Prevent double-posting on mobile where touchend and click both fire.
-    if (assistSendLocked || now - lastAssistTapAt < 1800) {
+    if (assistSendLocked || now - lastAssistTapAt < 3500) {
       console.log('[Fries91 Assist] Ignored duplicate tap/send.');
       return;
     }
@@ -604,7 +591,7 @@
     } finally {
       setTimeout(() => {
         assistSendLocked = false;
-      }, 2200);
+      }, 4000);
     }
   }
 
@@ -631,7 +618,7 @@
 
         // touchend and click can both fire from one tap on mobile.
         const now = Date.now();
-        if (now - lastAssistTapAt < 350) return;
+        if (now - lastAssistTapAt < 1200) return;
 
         sendAssist();
       };
