@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Assist Button Lite
 // @namespace    Fries91.Torn.AssistButton
-// @version      3.5.0
+// @version      3.6.0
 // @description  Lightweight Assist button for TornPDA. Chat must be open. One tap sends one assist message.
 // @author       Fries91
 // @match        https://www.torn.com/*
@@ -15,7 +15,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '3.5.0';
+  const VERSION = '3.6.0';
   const BAR_ID = 'fries91-assist-lite-bar';
   const TOAST_ID = 'fries91-assist-lite-toast';
   const GLOBAL_LOCK_KEY = 'fries91_assist_lite_lock_v35';
@@ -144,11 +144,11 @@
       bar.id = BAR_ID;
 
       const text = document.createElement('span');
-      text.textContent = 'Tactical mistake detected.';
+      text.textContent = 'Mistake detected.';
 
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.textContent = '⚔️ ASSIST';
+      btn.textContent = '⚔ ASSIST';
 
       btn.addEventListener('click', function (ev) {
         ev.preventDefault();
@@ -163,29 +163,32 @@
     css(bar, 'display', 'flex');
     css(bar, 'align-items', 'center');
     css(bar, 'justify-content', 'space-between');
-    css(bar, 'gap', '8px');
+    css(bar, 'gap', '5px');
     css(bar, 'box-sizing', 'border-box');
-    css(bar, 'width', 'calc(100% - 12px)');
-    css(bar, 'margin', '3px auto 5px auto');
-    css(bar, 'padding', '4px 8px');
+    css(bar, 'width', 'calc(100% - 24px)');
+    css(bar, 'margin', '1px auto 2px auto');
+    css(bar, 'padding', '2px 6px');
     css(bar, 'border', '1px solid #b78326');
-    css(bar, 'border-radius', '8px');
+    css(bar, 'border-radius', '6px');
     css(bar, 'background', 'linear-gradient(180deg, rgba(43,9,9,.96), rgba(11,5,5,.96))');
     css(bar, 'box-shadow', '0 1px 6px rgba(0,0,0,.45)');
     css(bar, 'color', '#ffd36a');
-    css(bar, 'font', '900 12px Arial,sans-serif');
-    css(bar, 'line-height', '1.1');
+    css(bar, 'font', '900 11px Arial,sans-serif');
+    css(bar, 'line-height', '1');
     css(bar, 'position', 'relative');
     css(bar, 'z-index', '20');
+    css(bar, 'min-height', '22px');
+    css(bar, 'max-height', '26px');
+    css(bar, 'overflow', 'hidden');
 
     const btn = bar.querySelector('button');
-    css(btn, 'padding', '4px 10px');
-    css(btn, 'min-height', '24px');
+    css(btn, 'padding', '2px 8px');
+    css(btn, 'min-height', '20px');
     css(btn, 'border', '1px solid #ffcc55');
-    css(btn, 'border-radius', '7px');
+    css(btn, 'border-radius', '6px');
     css(btn, 'background', 'linear-gradient(180deg,#5a1414,#180606)');
     css(btn, 'color', '#fff0b0');
-    css(btn, 'font', '900 11px Arial,sans-serif');
+    css(btn, 'font', '900 10px Arial,sans-serif');
     css(btn, 'box-shadow', '0 1px 5px rgba(0,0,0,.55)');
     css(btn, 'touch-action', 'manipulation');
     css(btn, 'cursor', 'pointer');
