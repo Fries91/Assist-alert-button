@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Fight Assist Bar Under News Ticker
 // @namespace    Fries91.Torn.AssistButton
-// @version      3.3.0
+// @version      3.4.0
 // @description  Slim Assist bar under Torn's news ticker. Opens faction chat, fills the fight link, and tries to send. Auto-updates from GitHub.
 // @author       Fries91
 // @match        https://www.torn.com/*
@@ -15,7 +15,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '3.3.0';
+  const VERSION = '3.4.0';
   const BAR_ID = 'fries91-assist-news-bar';
   const TOAST_ID = 'fries91-assist-toast';
   const ASSIST_COMMAND = '/assist';
@@ -112,23 +112,27 @@
   function isAttackPage() {
     const url = new URL(location.href);
     const href = location.href.toLowerCase();
-    const text = (document.body?.innerText || '').slice(0, 14000).toLowerCase();
+    const text = (document.body?.innerText || '').slice(0, 20000).toLowerCase();
 
+    // TornPDA sometimes keeps odd URLs/titles, so use loose fight-page signals too.
     return (
       url.searchParams.get('sid') === 'attack' ||
       href.includes('sid=attack') ||
+      text.includes('you do not have enough energy') ||
+      text.includes('start fight') ||
+      text.includes('leave fight') ||
+      text.includes('attack again') ||
+      text.includes('hospitalize') ||
+      text.includes('mug') ||
+      text.includes('run away') ||
       (
         text.includes('attacking') &&
         (
-          text.includes('you do not have enough energy') ||
-          text.includes('attack again') ||
-          text.includes('start fight') ||
-          text.includes('leave fight') ||
-          text.includes('hospitalize') ||
-          text.includes('mug') ||
-          text.includes('run away') ||
+          text.includes('unknown') ||
           text.includes('fairfight') ||
-          text.includes('est. stats')
+          text.includes('est. stats') ||
+          text.includes('/ 150') ||
+          text.includes('/ 55')
         )
       )
     );
@@ -677,6 +681,74 @@
     return bar;
   }
 
+
+  function findLowerAttackingAnchor() {
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const matches = [];
+    let node;
+
+    while ((node = walker.nextNode())) {
+      const txt = (node.nodeValue || '').trim();
+      if (txt !== 'Attacking') continue;
+
+      try {
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        const rect = range.getBoundingClientRect();
+        range.detach();
+
+        // Skip TornPDA top title. Keep the actual page's lower Attacking title.
+        if (rect.top > 170 && rect.left < 260 && rect.width > 20) {
+          matches.push({ node, rect });
+        }
+      } catch (_) {}
+    }
+
+    matches.sort((a, b) => a.rect.top - b.rect.top);
+    const textNode = matches[0]?.node;
+    if (!textNode?.parentElement) return null;
+
+    let el = textNode.parentElement;
+
+    // Walk up a little to get a row/container above the fight section.
+    for (let i = 0; i < 5 && el.parentElement; i++) {
+      const r = el.getBoundingClientRect();
+      const t = (el.textContent || '').trim();
+
+      if (r.width > 260 && r.height < 120 && t.includes('Attacking')) {
+        return el;
+      }
+
+      el = el.parentElement;
+    }
+
+    return textNode.parentElement;
+  }
+
+  function forceFallbackInsert(bar) {
+    const attackingAnchor = findLowerAttackingAnchor();
+
+    if (attackingAnchor?.parentElement) {
+      attackingAnchor.parentElement.insertBefore(bar, attackingAnchor);
+      console.log('[Fries91 Assist] Fallback inserted above Attacking v' + VERSION);
+      return true;
+    }
+
+    const main =
+      document.querySelector('#mainContainer') ||
+      document.querySelector('[class*="content"]') ||
+      document.querySelector('[class*="page"]') ||
+      document.body;
+
+    if (main && bar.parentElement !== main) {
+      main.prepend(bar);
+      console.log('[Fries91 Assist] Emergency inserted at page top v' + VERSION);
+      return true;
+    }
+
+    return false;
+  }
+
   function scoreNewsCandidate(el) {
     const r = el.getBoundingClientRect();
     const txt = (el.textContent || '').trim().toLowerCase();
@@ -723,15 +795,17 @@
     const bar = makeBar();
     const anchor = findNewsTickerAnchor();
 
-    if (!anchor || !anchor.parentElement) {
-      if (!bar.parentElement) document.body.prepend(bar);
+    // Best spot: directly under Torn news ticker.
+    if (anchor && anchor.parentElement && anchor.parentElement !== bar) {
+      if (bar.parentElement !== anchor.parentElement || bar.previousElementSibling !== anchor) {
+        anchor.parentElement.insertBefore(bar, anchor.nextSibling);
+        console.log('[Fries91 Assist] Injected under news ticker v' + VERSION);
+      }
       return;
     }
 
-    if (bar.parentElement !== anchor.parentElement || bar.previousElementSibling !== anchor) {
-      anchor.parentElement.insertBefore(bar, anchor.nextSibling);
-      console.log('[Fries91 Assist] Injected under news ticker v' + VERSION);
-    }
+    // Fallback spot: directly above lower Attacking section.
+    forceFallbackInsert(bar);
   }
 
   function handleAssistCommand(e) {
