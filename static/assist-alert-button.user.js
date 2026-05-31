@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Fight Assist Bar Under News Ticker
 // @namespace    Fries91.Torn.AssistButton
-// @version      3.2.0
+// @version      3.3.0
 // @description  Slim Assist bar under Torn's news ticker. Opens faction chat, fills the fight link, and tries to send. Auto-updates from GitHub.
 // @author       Fries91
 // @match        https://www.torn.com/*
@@ -15,12 +15,13 @@
 (function () {
   'use strict';
 
-  const VERSION = '3.2.0';
+  const VERSION = '3.3.0';
   const BAR_ID = 'fries91-assist-news-bar';
   const TOAST_ID = 'fries91-assist-toast';
   const ASSIST_COMMAND = '/assist';
   let assistSendLocked = false;
   let lastAssistTapAt = 0;
+  const GLOBAL_LOCK_KEY = 'fries91_assist_global_send_lock_v33';
 
   function css(el, prop, value) {
     if (el) el.style.setProperty(prop, value, 'important');
@@ -556,33 +557,33 @@
 
     const sendBtn = findSendButton();
 
-    if (sendBtn) {
-      // Use ONE send action only.
-      // Do not press Enter afterward. TornPDA may still show the text briefly,
-      // and that was causing duplicate faction chat posts.
-      trustedClickish(sendBtn);
-      await sleep(700);
-      toast('Assist link sent to faction chat.');
-      return true;
+    if (!sendBtn) {
+      navigator.clipboard?.writeText(message).catch(() => {});
+      toast('Chat is open and link is ready. Tap send.', false);
+      return false;
     }
 
-    // If no send button is found, leave the text ready for manual send.
-    navigator.clipboard?.writeText(message).catch(() => {});
-    toast('Chat opened and link is ready. Tap send.', false);
-    return false;
+    // One send action only. No Enter fallback. No coordinate fallback.
+    trustedClickish(sendBtn);
+    await sleep(700);
+
+    toast('Assist link sent to faction chat.');
+    return true;
   }
 
   async function sendAssist() {
     const now = Date.now();
+    const lastGlobal = Number(localStorage.getItem(GLOBAL_LOCK_KEY) || '0');
 
-    // Prevent double-posting on mobile where touchend and click both fire.
-    if (assistSendLocked || now - lastAssistTapAt < 3500) {
+    // Global lock prevents duplicate sends from double-clicks or duplicate handlers.
+    if (assistSendLocked || now - lastAssistTapAt < 5000 || now - lastGlobal < 5000) {
       console.log('[Fries91 Assist] Ignored duplicate tap/send.');
       return;
     }
 
     assistSendLocked = true;
     lastAssistTapAt = now;
+    localStorage.setItem(GLOBAL_LOCK_KEY, String(now));
 
     try {
       const msg = buildAssistMessage();
@@ -591,44 +592,48 @@
     } finally {
       setTimeout(() => {
         assistSendLocked = false;
-      }, 4000);
+      }, 5000);
     }
   }
 
   function makeBar() {
     let bar = document.getElementById(BAR_ID);
 
+    // Rebuild the bar every time if it came from an older version.
+    // This removes old touchend/click handlers that can cause duplicate posts.
+    if (bar && bar.dataset.assistVersion !== VERSION) {
+      bar.remove();
+      bar = null;
+    }
+
     if (!bar) {
       bar = document.createElement('div');
       bar.id = BAR_ID;
-
-      const text = document.createElement('div');
-      text.className = 'fries-assist-text';
-      text.textContent = 'Tactical mistake detected.';
-
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'fries-assist-btn';
-      btn.textContent = '⚔️ ASSIST';
-      btn.title = 'Open faction chat and send fight assist link';
-
-      const handler = (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-
-        // touchend and click can both fire from one tap on mobile.
-        const now = Date.now();
-        if (now - lastAssistTapAt < 1200) return;
-
-        sendAssist();
-      };
-
-      btn.addEventListener('click', handler, true);
-      btn.addEventListener('touchend', handler, true);
-
-      bar.appendChild(text);
-      bar.appendChild(btn);
+      bar.dataset.assistVersion = VERSION;
+      document.body.appendChild(bar);
     }
+
+    // Rebuild children using onclick only. No touchend listener.
+    bar.replaceChildren();
+
+    const text = document.createElement('div');
+    text.className = 'fries-assist-text';
+    text.textContent = 'Tactical mistake detected.';
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'fries-assist-btn';
+    btn.textContent = '⚔️ ASSIST';
+    btn.title = 'Send fight assist link to open faction chat';
+
+    btn.onclick = (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      sendAssist();
+    };
+
+    bar.appendChild(text);
+    bar.appendChild(btn);
 
     css(bar, 'display', 'flex');
     css(bar, 'align-items', 'center');
@@ -649,32 +654,25 @@
     css(bar, 'position', 'relative');
     css(bar, 'z-index', '20');
 
-    const text = bar.querySelector('.fries-assist-text');
-    const btn = bar.querySelector('.fries-assist-btn');
+    css(text, 'color', '#ffd36a');
+    css(text, 'font', '900 12px Arial,sans-serif');
+    css(text, 'white-space', 'nowrap');
+    css(text, 'overflow', 'hidden');
+    css(text, 'text-overflow', 'ellipsis');
 
-    if (text) {
-      css(text, 'color', '#ffd36a');
-      css(text, 'font', '900 12px Arial,sans-serif');
-      css(text, 'white-space', 'nowrap');
-      css(text, 'overflow', 'hidden');
-      css(text, 'text-overflow', 'ellipsis');
-    }
-
-    if (btn) {
-      css(btn, 'padding', '4px 10px');
-      css(btn, 'min-height', '24px');
-      css(btn, 'border', '1px solid #ffcc55');
-      css(btn, 'border-radius', '7px');
-      css(btn, 'background', 'linear-gradient(180deg,#5a1414,#180606)');
-      css(btn, 'color', '#fff0b0');
-      css(btn, 'font', '900 11px Arial,sans-serif');
-      css(btn, 'letter-spacing', '.25px');
-      css(btn, 'box-shadow', '0 1px 5px rgba(0,0,0,.55)');
-      css(btn, 'touch-action', 'manipulation');
-      css(btn, 'cursor', 'pointer');
-      css(btn, 'white-space', 'nowrap');
-      css(btn, 'flex', '0 0 auto');
-    }
+    css(btn, 'padding', '4px 10px');
+    css(btn, 'min-height', '24px');
+    css(btn, 'border', '1px solid #ffcc55');
+    css(btn, 'border-radius', '7px');
+    css(btn, 'background', 'linear-gradient(180deg,#5a1414,#180606)');
+    css(btn, 'color', '#fff0b0');
+    css(btn, 'font', '900 11px Arial,sans-serif');
+    css(btn, 'letter-spacing', '.25px');
+    css(btn, 'box-shadow', '0 1px 5px rgba(0,0,0,.55)');
+    css(btn, 'touch-action', 'manipulation');
+    css(btn, 'cursor', 'pointer');
+    css(btn, 'white-space', 'nowrap');
+    css(btn, 'flex', '0 0 auto');
 
     return bar;
   }
