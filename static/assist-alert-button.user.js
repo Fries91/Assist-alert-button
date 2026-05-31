@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Fight Assist Bar Under News Ticker
 // @namespace    Fries91.Torn.AssistButton
-// @version      2.7.0
+// @version      3.0.0
 // @description  Slim Assist bar under Torn's news ticker. Opens faction chat, fills the fight link, and tries to send. Auto-updates from GitHub.
 // @author       Fries91
 // @match        https://www.torn.com/*
@@ -15,7 +15,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '2.7.0';
+  const VERSION = '3.0.0';
   const BAR_ID = 'fries91-assist-news-bar';
   const TOAST_ID = 'fries91-assist-toast';
   const ASSIST_COMMAND = '/assist';
@@ -131,14 +131,86 @@
     );
   }
 
+  function randomAssistText() {
+    const messages = [
+      '⚔️ Tactical mistake detected. Backup required!',
+      '🚨 I have made a poor life choice. Send help!',
+      '🫡 This was absolutely part of the plan. Assist please!',
+      '🥴 I poked the wrong bear. Faction, assemble!',
+      '📉 My confidence has left the chat. Backup needed!',
+      '🧯 The plan is on fire. Please bring people.',
+      '🐢 Tactical bravery has expired. Assist!',
+      '⚰️ If I die, delete my browser history. Assist!',
+      '🥊 I started it. They are finishing it. Help!',
+      '🆘 Emergency tactical friendship request!',
+      '🏃 This fight went from “easy” to “oh no” real fast.',
+      '🔔 Ding ding! I found a problem with fists. Assist!',
+      '🤡 Clown move detected. Backup appreciated.',
+      '🪦 Please prevent my name from becoming a cautionary tale.',
+      '🚑 My face is filing a complaint. Send backup!',
+      '📣 Backup required and maybe a motivational speech.',
+      '🫠 Confidence is not a defensive stat. Help!',
+      '🍿 Come watch me make questionable choices in real time.',
+      '🚩 I ignored the red flags. Now I am the red flag. Assist!',
+      '🧠 My strategy has been reviewed and rejected. Backup!',
+      '🦆 Wrong pond. Wrong duck. Send help.',
+      '🪓 I chose violence and violence chose me back.',
+      '💀 This was supposed to be a quick hit. It is not.',
+      '🛟 Throw me a faction-shaped life raft.',
+      '🥲 I am not losing. I am providing content. Assist!',
+      '📦 Special delivery: one bad decision. Backup requested!',
+      '🧃 My courage ran out of juice. Assist needed!',
+      '🚕 I would like to leave this fight now. Backup!',
+      '🎯 Target acquired. Regret also acquired.',
+      '🧍 I am once again asking for violent friendship.',
+      '🔧 Minor issue: enemy still has hands. Help!',
+      '📞 Hello faction support? I broke myself.',
+      '🧱 I found a wall and punched it. The wall is winning.',
+      '🎪 Welcome to my circus. Please bring damage.',
+      '🥷 I attempted stealth. They noticed my face.',
+      '🧨 This escalated from fight to group project.',
+      '💌 Sending a formal invitation to save me.',
+      '🪤 I have activated the enemy. This is unfortunate.',
+      '🥔 My battle plan has the structural integrity of a potato.',
+      '🧻 I am getting folded. Send reinforcements.',
+      '🛎️ Room service? One order of backup, please.',
+      '🪦 Please stop my funeral playlist from starting.',
+      '🧯 Situation status: spicy. Assistance required.',
+      '🎲 Rolled the dice. Dice said “lol no.” Assist!',
+      '🫥 I am rapidly becoming a cautionary example.',
+      '🧙 I cast “Help Me” at maximum volume.',
+      '🐌 Backup requested before I become floor decoration.',
+      '🚧 Fight confidence under construction. Send help.',
+      '🪖 Operation Save My Face is now active.',
+      '🦺 Safety inspector says I need backup immediately.',
+      '💣 Tiny tactical oopsie. Big backup needed.',
+      '🫡 Tell my faction I bravely pressed the wrong button.',
+      '🧀 I have entered the danger cheese. Assist!',
+      '📉 My health bar is investing in failure.',
+      '🏳️ I am not surrendering. I am requesting teamwork.',
+      '🧃 Juice box empty. Enemy still full. Help!',
+      '🧍‍♂️ Standing here like a free respect donation. Assist!',
+      '🛠️ Fight is broken. Please send mechanics with weapons.',
+      '🧲 Somehow I attracted problems. Backup needed.',
+      '🧊 Cool plan. Terrible execution. Assist!',
+      '📦 I ordered backup with express shipping.',
+      '🪙 Heads I win, tails I need assist. It was tails.',
+      '🦖 I have discovered a dinosaur with fists. Help!',
+      '🧯 Fire extinguisher not enough. Send faction.'
+    ];
+
+    return messages[Math.floor(Math.random() * messages.length)];
+  }
+
   function buildAssistMessage() {
     const targetId = getAttackTargetId();
+    const intro = randomAssistText();
 
     if (targetId) {
-      return `⚔️ ASSIST NEEDED! Join/help fight here: https://www.torn.com/loader.php?sid=attack&user2ID=${targetId}`;
+      return `${intro} Join/help fight here: https://www.torn.com/loader.php?sid=attack&user2ID=${targetId}`;
     }
 
-    return `⚔️ ASSIST NEEDED! Join/help fight here: ${location.href}`;
+    return `${intro} Join/help fight here: ${location.href}`;
   }
 
   function toast(message, good = true) {
