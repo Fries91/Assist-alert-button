@@ -1,19 +1,21 @@
 // ==UserScript==
 // @name         Torn Fight Assist Bar Under News Ticker
 // @namespace    Fries91.Torn.AssistButton
-// @version      2.6.0
-// @description  Slim Assist bar under Torn's news ticker. Opens faction chat, fills the fight link, and tries to send.
+// @version      2.7.0
+// @description  Slim Assist bar under Torn's news ticker. Opens faction chat, fills the fight link, and tries to send. Auto-updates from GitHub.
 // @author       Fries91
 // @match        https://www.torn.com/*
 // @match        https://www.torn.com/loader.php*
 // @grant        none
 // @run-at       document-idle
+// @updateURL    https://raw.githubusercontent.com/Fries91/Assist-alert-button/main/static/assist-alert-button.user.js
+// @downloadURL  https://raw.githubusercontent.com/Fries91/Assist-alert-button/main/static/assist-alert-button.user.js
 // ==/UserScript==
 
 (function () {
   'use strict';
 
-  const VERSION = '2.6.0';
+  const VERSION = '2.7.0';
   const BAR_ID = 'fries91-assist-news-bar';
   const TOAST_ID = 'fries91-assist-toast';
   const ASSIST_COMMAND = '/assist';
@@ -524,7 +526,7 @@
 
       const text = document.createElement('div');
       text.className = 'fries-assist-text';
-      text.textContent = 'Oops I fucked up.';
+      text.textContent = 'Tactical mistake detected.';
 
       const btn = document.createElement('button');
       btn.type = 'button';
