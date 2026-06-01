@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Assist Button Lite
 // @namespace    Fries91.Torn.AssistButton
-// @version      3.6.0
+// @version      3.7.0
 // @description  Lightweight Assist button for TornPDA. Chat must be open. One tap sends one assist message.
 // @author       Fries91
 // @match        https://www.torn.com/*
@@ -15,10 +15,10 @@
 (function () {
   'use strict';
 
-  const VERSION = '3.6.0';
+  const VERSION = '3.7.0';
   const BAR_ID = 'fries91-assist-lite-bar';
   const TOAST_ID = 'fries91-assist-lite-toast';
-  const GLOBAL_LOCK_KEY = 'fries91_assist_lite_lock_v35';
+  const GLOBAL_LOCK_KEY = 'fries91_assist_lite_lock_v37';
 
   let installed = false;
   let sendLocked = false;
@@ -314,40 +314,50 @@
       .filter(x => x.score > 70)
       .sort((a, b) => b.score - a.score);
 
-    return buttons[0]?.el || null;
+    const found = buttons[0]?.el || null;
+    return found?.closest?.('button, [role="button"], input[type="submit"], a') || found;
   }
 
   function clickEl(el) {
-    const r = el.getBoundingClientRect();
-    const x = r.left + r.width / 2;
-    const y = r.top + r.height / 2;
+    if (!el) return;
 
-    const opts = {
-      bubbles: true,
-      cancelable: true,
-      view: window,
-      clientX: x,
-      clientY: y
-    };
+    // If detector grabbed an icon/svg/path, click the real clickable parent once.
+    const clickable =
+      el.closest?.('button, [role="button"], input[type="submit"], a') ||
+      el;
 
-    el.dispatchEvent(new MouseEvent('mousedown', opts));
-    el.dispatchEvent(new MouseEvent('mouseup', opts));
-    el.dispatchEvent(new MouseEvent('click', opts));
-
-    try { el.click(); } catch (_) {}
+    // ONE action only. Do not dispatch mousedown/mouseup + click + .click(),
+    // because TornPDA can treat that as multiple sends.
+    try {
+      clickable.click();
+    } catch (_) {
+      clickable.dispatchEvent(new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        view: window
+      }));
+    }
   }
 
   async function sendAssistOnce() {
     const now = Date.now();
     const last = Number(localStorage.getItem(GLOBAL_LOCK_KEY) || '0');
 
-    if (sendLocked || now - last < 5000) {
-      toast('Already sent. Wait a second.', false);
+    // Hard lock: no second assist send for 10 seconds, no matter what.
+    if (sendLocked || now - last < 10000) {
+      toast('Already sent. Wait a few seconds.', false);
       return;
     }
 
     sendLocked = true;
     localStorage.setItem(GLOBAL_LOCK_KEY, String(now));
+
+    const assistBtn = document.querySelector('#' + BAR_ID + ' button');
+    if (assistBtn) {
+      assistBtn.disabled = true;
+      assistBtn.textContent = 'SENT';
+      css(assistBtn, 'opacity', '.65');
+    }
 
     try {
       const input = findChatInput();
@@ -360,7 +370,7 @@
       const message = buildAssistMessage();
       setInputText(input, message);
 
-      await sleep(150);
+      await sleep(200);
 
       const sendBtn = findSendButtonNearInput(input);
 
@@ -369,12 +379,18 @@
         return;
       }
 
+      // ONE click only.
       clickEl(sendBtn);
       toast('Assist sent once.');
     } finally {
       setTimeout(() => {
         sendLocked = false;
-      }, 5000);
+        if (assistBtn) {
+          assistBtn.disabled = false;
+          assistBtn.textContent = '⚔ ASSIST';
+          css(assistBtn, 'opacity', '1');
+        }
+      }, 10000);
     }
   }
 
